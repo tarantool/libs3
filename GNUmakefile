@@ -142,7 +142,7 @@ CFLAGS += -Wall -Werror -Wshadow -Wextra -Iinc \
           -D_ISOC99_SOURCE \
           -D_POSIX_C_SOURCE=200112L
 
-LDFLAGS = $(CURL_LIBS) $(LIBXML2_LIBS) -lpthread
+LDFLAGS = $(CURL_LIBS) $(LIBXML2_LIBS) -lpthread -lssl -lcrypto
 
 
 # --------------------------------------------------------------------------

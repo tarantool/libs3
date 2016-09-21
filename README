@@ -1,4 +1,16 @@
-This directory contains the libs3 library.
+This directory contains the fork of libs3 library.
+
+What is patched:
+1. Merged zhang-jingwang v4 auth patch (https://github.com/zhang-jingwang/libs3/commit/e7433171e61f618f5b317d4b0769bcacaaf6a7d3)
+2. Fixed bug with md5/sha
+3. CURLOPT_INFILESIZE option added
+4. Mac os build fixed
+
+Tested in actual mac os and s3 minio 21.09.2016
+
+Used in our project for get/put/list requests:
+/build/bin/s3 -u put test/abc.txt filename=../test.txt md5=<base64(binary MD5):SHA256>
+./build/bin/s3 -u get test/abc.txt filename=../abc.txt
 
 The libs3 library is free software.  See the file LICENSE for copying
 permission.

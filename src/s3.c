@@ -64,7 +64,7 @@ static S3Protocol protocolG = S3ProtocolHTTPS;
 static S3UriStyle uriStyleG = S3UriStylePath;
 static int retriesG = 5;
 static int verifyPeerG = 0;
-static int useSignatureV4G = 0;
+static int useSignatureV4G = 1;
 
 
 // Environment variables, saved as globals ----------------------------------
@@ -2365,6 +2365,7 @@ static void put_object(int argc, char **argv, int optindex,
         0
     };
 
+    *strchr(md5, ':') = 0;
     S3PutProperties putProperties =
     {
         contentType,

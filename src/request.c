@@ -35,6 +35,7 @@
 #include "util.h"
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
+#include <unistd.h>
 
 #define USER_AGENT_SIZE 256
 #define REQUEST_STACK_SIZE 32
@@ -370,7 +371,10 @@ static S3Status compose_amz_headers(const RequestParams *params,
     if (signatureVersionG == S3SignatureV4) {
         // Add the x-amz-content-sha256 header
         if (properties && properties->md5 && properties->md5[0]) {
-            headers_append(1, "x-amz-content-sha256: %s", properties->md5);
+            headers_append(
+                1, "x-amz-content-sha256: %s",
+                properties->md5 + 1 + strlen(properties->md5)
+            );
         } else {
             headers_append(1, "%s", "x-amz-content-sha256: UNSIGNED-PAYLOAD");
         }
@@ -386,8 +390,8 @@ static S3Status compose_amz_headers(const RequestParams *params,
         // If byteCount != 0 then we're just copying a range, add header
         if (params->byteCount > 0) {
             headers_append(1, "x-amz-copy-source-range: bytes=%ld-%ld",
-                           params->startByte,
-                           params->startByte + params->byteCount);
+                           (long) params->startByte,
+                           (long) (params->startByte + params->byteCount));
         }
         // And the x-amz-metadata-directive header
         if (properties) {
@@ -1053,11 +1057,17 @@ static S3Status canonicalize_headers(char *buf, int maxlen, int *plen,
     struct curl_slist *itr;
     S3Status ret;
 
-    for (itr = curl_headers; itr != NULL; itr = itr->next) {
+    // fix content length bug with element skip
+    itr = curl_headers;
+    if(itr && !strncasecmp(itr->data, "content-length", 15)){
+        itr = curl_headers->next;
+    }
+    for (; itr != NULL; itr = itr->next) {
         if (count >= sizeof(headers)) return S3StatusHeadersTooLong;
         headers[count] = itr->data;
         count++;
     }
+
     general_gnome_sort(headers, count, headerle_nocase);
     // Now copy this sorted list into the buffer, all the while:
     // - folding repeated headers into single lines, and
@@ -1188,7 +1198,9 @@ S3Status canonicalize_request_hash(char *buf, int maxlen, int *plen,
     if (ret != S3StatusOK) return ret;
     if (params->putProperties && params->putProperties->md5
         && params->putProperties->md5[0]) {
-        creq_append("%s", params->putProperties->md5);
+        creq_append(
+            "%s",params->putProperties->md5 + 1 + strlen(params->putProperties->md5)
+        );
     } else {
         creq_append("%s", "UNSIGNED-PAYLOAD");
     }
@@ -1372,12 +1384,16 @@ static S3Status setup_curl(Request *request,
     // Would use CURLOPT_INFILESIZE_LARGE, but it is buggy in libcurl
     if ((params->httpRequestType == HttpRequestTypePUT) ||
         (params->httpRequestType == HttpRequestTypePOST)) {
+        curl_easy_setopt_safe(
+            CURLOPT_INFILESIZE,
+            (unsigned long long) params->toS3CallbackTotalSize
+        );
         char header[256];
         snprintf(header, sizeof(header), "Content-Length: %llu",
                  (unsigned long long) params->toS3CallbackTotalSize);
         request->headers = curl_slist_append(request->headers, header);
-        request->headers = curl_slist_append(request->headers, 
-                                             "Transfer-Encoding:");
+        //request->headers = curl_slist_append(request->headers,
+        //                                     "Transfer-Encoding:");
     }
     else if (params->httpRequestType == HttpRequestTypeCOPY) {
         request->headers = curl_slist_append(request->headers, 
