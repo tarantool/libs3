@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/utsname.h>
 #include "request.h"
 #include "request_context.h"
